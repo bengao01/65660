@@ -160,7 +160,7 @@ const char *http_request_headers(int fd)
 {
     static char buf[8192];      /* static variables are not on the stack */
     const char *r;
-    char value[512];
+    static char value[512];
     char envvar[512];
 
     /* For lab 2: don't remove this line. */
