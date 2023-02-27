@@ -3,6 +3,8 @@ from debug import *
 
 import hashlib
 import secrets
+import os
+import pbkdf2
 
 def newtoken(db, cred):
     hashinput = "%s.%s" % (secrets.token_bytes(16), cred.password)
@@ -15,7 +17,11 @@ def login(username, password):
     cred = credDB.query(Cred).get(username)
     if not cred:
         return None
-    if cred.password == password:
+    log(cred.password)
+    log(pbkdf2.PBKDF2(password, cred.salt).hexread(32))
+    log(cred.salt)
+
+    if cred.password == pbkdf2.PBKDF2(password, cred.salt).hexread(32):
         return newtoken(credDB, cred)
     else:
         return None
@@ -30,7 +36,8 @@ def register(username, password):
 
     newCred = Cred()
     newCred.username = username
-    newCred.password = password
+    newCred.salt = os.urandom(8)
+    newCred.password = pbkdf2.PBKDF2(password, newCred.salt).hexread(32)
     newCred.token = newtoken(credDB, newCred)
     credDB.add(newCred)
     credDB.commit()
