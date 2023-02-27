@@ -4,38 +4,43 @@ from debug import *
 import hashlib
 import secrets
 
-def newtoken(db, person):
-    hashinput = "%s.%s" % (secrets.token_bytes(16), person.password)
-    person.token = hashlib.sha256(hashinput.encode('utf-8')).hexdigest()
+def newtoken(db, cred):
+    hashinput = "%s.%s" % (secrets.token_bytes(16), cred.password)
+    cred.token = hashlib.sha256(hashinput.encode('utf-8')).hexdigest()
     db.commit()
-    return person.token
+    return cred.token
 
 def login(username, password):
-    db = person_setup()
-    person = db.query(Person).get(username)
-    if not person:
+    credDB = cred_setup()
+    cred = credDB.query(Cred).get(username)
+    if not cred:
         return None
-    if person.password == password:
-        return newtoken(db, person)
+    if cred.password == password:
+        return newtoken(credDB, cred)
     else:
         return None
 
 def register(username, password):
-    db = person_setup()
-    person = db.query(Person).get(username)
-    if person:
+    credDB = cred_setup()
+    
+    # Create new Cred Object
+    cred = credDB.query(Cred).get(username)
+    if cred:
         return None
-    newperson = Person()
-    newperson.username = username
-    newperson.password = password
-    db.add(newperson)
-    db.commit()
-    return newtoken(db, newperson)
+
+    newCred = Cred()
+    newCred.username = username
+    newCred.password = password
+    newCred.token = newtoken(credDB, newCred)
+    credDB.add(newCred)
+    credDB.commit()
+
+    return newCred.token
 
 def check_token(username, token):
-    db = person_setup()
-    person = db.query(Person).get(username)
-    if person and person.token == token:
+    credDB = cred_setup()
+    cred = credDB.query(Cred).get(username)
+    if cred and cred.token == token:
         return True
     else:
         return False

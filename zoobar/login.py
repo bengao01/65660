@@ -5,6 +5,7 @@ from zoodb import *
 from typing import Optional
 
 import auth
+import auth_client
 import bank
 import random
 
@@ -13,7 +14,7 @@ class User(object):
         self.person = None
 
     def checkLogin(self, username: str, password: str) -> Optional[str]:
-        token = auth.login(username, password)
+        token = auth_client.login(username, password)
         if token is not None:
             return self.loginCookie(username, token)
         else:
@@ -27,8 +28,19 @@ class User(object):
         self.person = None
 
     def addRegistration(self, username: str, password: str) -> Optional[str]:
-        token = auth.register(username, password)
+        token = auth_client.register(username, password)
         if token is not None:
+            personDB = person_setup()
+            
+            # Create new Person Object
+            person = personDB.query(Person).get(username)
+            if person:
+                return None
+            newPerson = Person()
+            newPerson.username = username
+            personDB.add(newPerson)
+            personDB.commit()
+
             return self.loginCookie(username, token)
         else:
             return None
@@ -37,12 +49,12 @@ class User(object):
         if cookie is None:
             return
         (username, token) = cookie.rsplit("#", 1)
-        if auth.check_token(username, token):
+        if auth_client.check_token(username, token):
             self.setPerson(username, token)
 
     def setPerson(self, username: str, token: str) -> None:
-        persondb = person_setup()
-        self.person = persondb.query(Person).get(username)
+        personDB = person_setup()
+        self.person = personDB.query(Person).get(username)
         self.token = token
         self.zoobars = bank.balance(username)
 
