@@ -6,7 +6,7 @@ import rpcsrv
 import sys
 import os
 import hashlib
-import bank
+# import bank
 import zoodb
 import tempfile
 import shutil
@@ -14,6 +14,9 @@ import signal
 import wasmtime
 import threading
 import time
+
+sys.path.append(os.getcwd())
+import readconf
 
 from debug import *
 
@@ -33,16 +36,31 @@ class ProfileAPIServer(rpcsrv.RpcServer):
         return self.visitor
 
     def rpc_get_xfers(self, username):
-        return bank.get_log(username)
+        # return bank.get_log(username)
+        host = readconf.read_conf().lookup_host('bank')
+        with rpclib.client_connect(host) as c:
+            ret = c.call('get_log', username=username)
+            return ret
 
     def rpc_get_user_info(self, username):
+        host = readconf.read_conf().lookup_host('bank')
+        with rpclib.client_connect(host) as c:
+            zoobars = c.call('balance', username=username)
         return { 'username': self.user,
                  'profile': self.pcode,
-                 'zoobars': bank.balance(username),
+                 'zoobars': zoobars,
                }
+        # return { 'username': self.user,
+        #          'profile': self.pcode,
+        #          'zoobars': bank.balance(username),
+        #        }
 
     def rpc_xfer(self, target, zoobars):
-        bank.transfer(self.user, target, zoobars)
+        # bank.transfer(self.user, target, zoobars)
+        host = readconf.read_conf().lookup_host('bank')
+        with rpclib.client_connect(host) as c:
+            ret = c.call('transfer', username=username)
+            return ret
 
 class FifoServer(object):
     def __init__(self, server, fifo_pn):

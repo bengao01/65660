@@ -3,7 +3,11 @@ from flask import g, render_template, request, Markup
 from login import requirelogin
 from zoodb import *
 from debug import *
-import bank
+# import bank
+
+import rpclib
+sys.path.append(os.getcwd())
+import readconf
 
 @catch_err
 @requirelogin
@@ -23,8 +27,14 @@ def users():
             args['profile'] = p_markup
 
             args['user'] = user
-            args['user_zoobars'] = bank.balance(user.username)
-            args['transfers'] = bank.get_log(user.username)
+
+            host = readconf.read_conf().lookup_host('bank')
+            with rpclib.client_connect(host) as c:
+                args['user_zoobars'] = c.call('balance', username=user.username)
+            with rpclib.client_connect(host) as c:
+                args['transfers'] = c.call('get_log', username=user.username)
+            # args['user_zoobars'] = bank.balance(user.username)
+            # args['transfers'] = bank.get_log(user.username)
         else:
             args['warning'] = "Cannot find that user."
     return render_template('users.html', **args)

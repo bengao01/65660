@@ -6,8 +6,12 @@ from typing import Optional
 
 import auth
 import auth_client
-import bank
+# import bank
 import random
+
+import rpclib
+sys.path.append(os.getcwd())
+import readconf
 
 class User(object):
     def __init__(self):
@@ -41,6 +45,11 @@ class User(object):
             personDB.add(newPerson)
             personDB.commit()
 
+            # Make a bank balance object so users have a default of 10 zoobars
+            host = readconf.read_conf().lookup_host('bank')
+            with rpclib.client_connect(host) as c:
+                ret = c.call('create', username=username)
+
             return self.loginCookie(username, token)
         else:
             return None
@@ -56,7 +65,11 @@ class User(object):
         personDB = person_setup()
         self.person = personDB.query(Person).get(username)
         self.token = token
-        self.zoobars = bank.balance(username)
+        # self.zoobars = bank.balance(username)
+        host = readconf.read_conf().lookup_host('bank')
+        with rpclib.client_connect(host) as c:
+            ret = c.call('balance', username=username)
+            self.zoobars = ret
 
 def logged_in() -> bool:
     g.user = User()
