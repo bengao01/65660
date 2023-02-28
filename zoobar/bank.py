@@ -3,7 +3,18 @@ from debug import *
 
 import time
 
-def transfer(sender, recipient, zoobars):
+import rpclib
+sys.path.append(os.getcwd())
+import readconf
+
+def transfer(sender, recipient, zoobars, token):
+    # Verify supplied token
+    host = readconf.read_conf().lookup_host('auth')
+    with rpclib.client_connect(host) as c:
+        isValid = c.call('check_token', username=sender, token=token)
+        if not isValid:
+            return
+
     bankDB = bank_setup()
     senderp = bankDB.query(Bank).get(sender)
     recipientp = bankDB.query(Bank).get(recipient)

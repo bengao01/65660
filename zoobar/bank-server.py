@@ -10,8 +10,8 @@ class BankRpcServer(rpcsrv.RpcServer):
         return bank.create(username)
     def rpc_balance(self, username):
         return bank.balance(username)
-    def rpc_transfer(self, sender, recipient, zoobars):
-        return bank.transfer(sender, recipient, zoobars)
+    def rpc_transfer(self, sender, recipient, zoobars, token):
+        return bank.transfer(sender, recipient, zoobars, token)
     def rpc_get_log(self, username):
         return bank.get_log(username)
 

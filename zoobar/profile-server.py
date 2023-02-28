@@ -59,7 +59,7 @@ class ProfileAPIServer(rpcsrv.RpcServer):
         # bank.transfer(self.user, target, zoobars)
         host = readconf.read_conf().lookup_host('bank')
         with rpclib.client_connect(host) as c:
-            ret = c.call('transfer', username=username)
+            ret = c.call('transfer', sender=self.user, recipient=target, zoobars=zoobars, token=g.user.token)
             return ret
 
 class FifoServer(object):

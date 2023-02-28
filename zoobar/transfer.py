@@ -28,7 +28,8 @@ def transfer():
                 ret = c.call('transfer',
                              sender=g.user.person.username,
                              recipient=request.form['recipient'],
-                             zoobars=zoobars)
+                             zoobars=zoobars,
+                             token=g.user.token)
             # bank.transfer(g.user.person.username,
             #               request.form['recipient'], zoobars)
             warning = "Sent %d zoobars" % zoobars
