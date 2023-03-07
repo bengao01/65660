@@ -569,8 +569,8 @@ def check_ex11():
         return
     if not check_fs("/testfile", True):
         return
-    # if not check_looper():
-    #     return
+    if not check_looper():
+        return
     ok("Exercise 11")
 
 def check_ex12():
