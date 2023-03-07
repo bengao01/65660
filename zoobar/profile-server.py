@@ -56,11 +56,11 @@ class ProfileAPIServer(rpcsrv.RpcServer):
         #        }
 
     def rpc_xfer(self, target, zoobars):
-        # bank.transfer(self.user, target, zoobars)
-        host = readconf.read_conf().lookup_host('bank')
-        with rpclib.client_connect(host) as c:
-            ret = c.call('transfer', sender=self.user, recipient=target, zoobars=zoobars, token=g.user.token)
-            return ret
+            # bank.transfer(self.user, target, zoobars)
+            host = readconf.read_conf().lookup_host('bank')
+            with rpclib.client_connect(host) as c:
+                ret = c.call('profile_transfer', sender=self.user, recipient=target, zoobars=zoobars)
+                return ret
 
 class FifoServer(object):
     def __init__(self, server, fifo_pn):
@@ -82,6 +82,7 @@ class ProfileServer(rpcsrv.RpcServer):
     def rpc_run(self, pcode, user, visitor):
         ## This function needs to run the Python profile code in pcode
         ## and return the output from that execution.
+        os.setuid(5660)
 
         ## The Python interpreter expects to be able to access files
         ## from wasm_python_dir as "/" when it runs.
@@ -137,6 +138,7 @@ class ProfileServer(rpcsrv.RpcServer):
             ## Finally, for exercise 11, you will need to deal with profile code
             ## that doesn't terminate.  The wasmtime runtime allows interrupting
             ## a running module by calling engine.increment_epoch().
+            # os.setuid(5660)
 
             config = wasmtime.Config()
             config.wasm_simd = False
@@ -149,8 +151,26 @@ class ProfileServer(rpcsrv.RpcServer):
 
             wasi = wasmtime.WasiConfig()
             wasi.inherit_stderr()
-            wasi.argv = ['python.wasm', ]
+
+            # preopen dir /data, write profileServer to /run/fifo, write api.py file to a dir, write pcode to a file
+            shutil.copyfile('zoobar/api.py', td + '/api.py')
+            shutil.copyfile('zoobar/rpclib.py', td + '/rpclib.py')
+
+            codeFile = td + '/code.py'
+            with open(codeFile, 'w') as f:
+                f.write(pcode)
+            
+            # How to write the object to the run/fifo
+            wasi.preopen_dir(td, '/run')
+
+            wasi.argv = ['python.wasm', '/run/code.py']
             wasi.preopen_dir(wasm_python_dir, '/')
+
+            wasi.preopen_dir(userdir, '/data')
+
+            # Output file is relative to the host dir, not to the wasm_python_dir?
+            output_file = td + '/output.txt'
+            wasi.stdout_file = output_file
 
             store = wasmtime.Store(engine)
             store.set_wasi(wasi)
@@ -161,13 +181,40 @@ class ProfileServer(rpcsrv.RpcServer):
 
             inst = linker.instantiate(store, mod)
             start = inst.exports(store)['_start']
+
             try:
+                # thread = threading.Thread(target = start, args(store,))
+                # thread.start()
+                # thread.join(5)
+                # if thread.is_alive():
+                #     engine.increment_epoch()
+                
+                # event = threading.Event()
+                # thread = threading.Thread(target = start(store), args(e,))
+                # self.startWasm(inst, store, event)
                 start(store)
+                # thread.start()
+                # thread.join(5)
+                # if thread.is_alive():
+                #     engine.increment_epoch()
+
             except wasmtime.ExitTrap as e:
                 if e.code != 0:
                     raise e
 
-            return ''
+            # read output and return
+            output = ''
+            try:
+                with open(output_file) as f:
+                    for line in f.readlines():
+                        output += line
+            except IOError as e:
+                print("ERROR: Failed to read wasm output")
+            return output
+
+    # def startWasm(self, inst, store, event):
+    #     start = inst.exports(store)['_start']
+    #     start(store)
 
 if len(sys.argv) != 2:
     print(sys.argv[0], "too few args")
